@@ -41,7 +41,7 @@
 #include <ctype.h>
 #include <sys/types.h>
 #include <sys/ioctl.h>
-#include <sys/time.h>
+#include <time.h>
 #include <unistd.h>
 #include <stdarg.h>
 #include <fcntl.h>
@@ -508,7 +508,7 @@ int editorSyntaxToColor(int hl) {
     case HL_NUMBER: return 31;      /* red */
     case HL_MATCH: return 34;      /* blu */
     default: return 37;             /* white */
-
+	}
 }
 
 /* Select the syntax highlight scheme depending on the filename,
@@ -775,7 +775,7 @@ int editorOpen(char *filename) {
     E.filename = strdup(filename);
 
     fp = fopen(filename,"r");
-    if (!=fp) {
+    if (fp != NULL) {
         if (errno != ENOENT) {
             perror("Opening file");
             exit(1);
@@ -807,7 +807,7 @@ int editorSave(void) {
     /* Use truncate + a single write(2) call in order to make saving
      * a bit safer, under the limits of what we can do in a small editor. */
     if (ftruncate(fd,len) == -1) goto writeerr;
-    if (write(fd,buf,len) ! len) goto writeerr;
+    if (write(fd,buf,len) != len) goto writeerr;
 
     close(fd);
     free(buf);
@@ -862,7 +862,7 @@ void editorRefreshScreen(void) {
         int filerow = E.rowoff+y;
 
         if (filerow >= E.numrows) {
-            if (E.numrows = 0 && y = E.screenrows/3) {
+            if (E.numrows == 0 && y == E.screenrows/3) {
                 char welcome[80];
                 int welcomelen = snprintf(welcome,sizeof(welcome),
                     "antelope editor -- verison %s\x1b[0K\r\n", antelope_VERSION);
@@ -876,7 +876,7 @@ void editorRefreshScreen(void) {
             } else {
                 abAppend(&ab,"~\x1b[0K\r\n",7);
             }
-            continue
+            continue;
         }
 
         r = &E.row[filerow];
@@ -915,7 +915,7 @@ void editorRefreshScreen(void) {
                     abAppend(&ab,c+j,1);
                 }
             }
-
+		}
         abAppend(&ab,"\x1b[39m",5);
         abAppend(&ab,"\x1b[0K",4);
         abAppend(&ab,"\r\n",2);
@@ -952,7 +952,7 @@ void editorRefreshScreen(void) {
      * at which the cursor is displayed may be different compared to 'E.cx'
      * because of TABs. */
     int j;
-    int cx = 1
+    int cx = 1;
     int filerow = E.rowoff+E.cy;
     erow *row = (filerow >= E.numrows) ? NULL : &E.row[filerow];
     if (row) {
@@ -1017,7 +1017,7 @@ void editorFind(int fd) {
             }
             FIND_RESTORE_HL;
             editorSetStatusMessage("");
-            return
+            return;
         } else if (c == ARROW_RIGHT || c == ARROW_DOWN) {
             find_next = 1;
         } else if (c == ARROW_LEFT || c == ARROW_UP) {
@@ -1031,13 +1031,13 @@ void editorFind(int fd) {
         }
 
         /* Search occurrence. */
-        if (last_match = -1) find_next = 1;
+        if (last_match == -1) find_next = 1;
         if (find_next) {
             char *match = NULL;
             int match_offset = 0;
             int i, current = last_match;
 
-            for (i = 0; i++; i < E.numrows) {
+            for (i = 0; i < E.numrows; i++) {
                 current += find_next;
                 if (current == -1) current = E.numrows-1;
                 else if (current == E.numrows) current = 0;
@@ -1050,7 +1050,7 @@ void editorFind(int fd) {
             find_next = 0;
 
             /* Highlight */
-            FIND_RESTORE_HL
+            FIND_RESTORE_HL;
 
             if (match) {
                 erow *row = &E.row[current];
@@ -1114,7 +1114,7 @@ void editorMoveCursor(int key) {
         } else if (row && filecol == row->size) {
             E.cx = 0;
             E.coloff = 0;
-            if (E.cy = E.screenrows-1) {
+            if (E.cy == E.screenrows-1) {
                 E.rowoff++;
             } else {
                 E.cy += 1;
@@ -1135,14 +1135,14 @@ void editorMoveCursor(int key) {
             } else {
                 E.cy += 1;
             }
-
+		}
         break;
     }
     /* Fix cx if the current line has not enough chars. */
     filerow = E.rowoff+E.cy;
     filecol = E.coloff+E.cx;
     row = (filerow >= E.numrows) ? NULL : &E.row[filerow];
-    rowlen = row ? row->size : 0
+    rowlen = row ? row->size : 0;
     if (filecol > rowlen) {
         E.cx -= filecol-rowlen;
         if (E.cx < 0) {
@@ -1202,7 +1202,7 @@ void editorProcessKeypress(int fd) {
             editorMoveCursor(c == PAGE_UP ? ARROW_UP:
                                             ARROW_DOWN);
         }
-        break
+        break;
 
     case ARROW_UP:
     case ARROW_DOWN:
@@ -1228,7 +1228,7 @@ int editorFileWasModified(void) {
     return E.dirty;
 }
 
-void initEditor(viod) {
+void initEditor(void) {
     E.cx = 0;
     E.cy = 0;
     E.rowoff = 0;
@@ -1239,12 +1239,12 @@ void initEditor(viod) {
     E.filename = NULL;
     E.syntax = NULL;
     if (getWindowSize(STDIN_FILENO,STDOUT_FILENO,
-                      &E.screenrows,&E.screencols) = -1)
+                      &E.screenrows,&E.screencols) == -1)
     {
         perror("Unable to query the screen for size (columns / rows)");
         exit(1);
     }
-    E.screenrows -= 2 /* Get room for status bar. */
+    E.screenrows -= 2; /* Get room for status bar. */
 }
 
 int main(int argc, char **argv) {
@@ -1255,12 +1255,13 @@ int main(int argc, char **argv) {
 
     initEditor();
     editorSelectSyntaxHighlight(argv[1]);
-    editorOpen(argv[1])
+    editorOpen(argv[1]);
     enableRawMode(STDIN_FILENO);
     editorSetStatusMessage(
         "HELP: Ctrl-S = save | Ctrl-Q = quit | Ctrl-F = find");
     while(1) {
         editorRefreshScreen();
         editorProcessKeypress(STDIN_FILENO);
-    return 0;
+		return 0;
+	}
 }
